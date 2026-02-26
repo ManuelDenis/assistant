@@ -24,7 +24,6 @@ validator = RequestValidator(TWILIO_AUTH_TOKEN)
 ALLOWED_NUMBERS = set(os.getenv("ALLOWED_NUMBERS", "").split(","))
 MAX_SILENCE_SECONDS = 90
 
-
 # Configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')  # requires OpenAI Realtime API Access
 PORT = int(os.getenv('PORT', 5050))
@@ -94,10 +93,10 @@ async def handle_media_stream(websocket: WebSocket):
     print("Client connected")
     await websocket.accept()
     async with websockets.connect(
-        f"wss://api.openai.com/v1/realtime?model=gpt-realtime-mini&temperature={TEMPERATURE}",
-        additional_headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}"
-        }
+            f"wss://api.openai.com/v1/realtime?model=gpt-realtime-mini&temperature={TEMPERATURE}",
+            additional_headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}"
+            }
     ) as openai_ws:
         await send_session_update(openai_ws)
         stream_sid = None
@@ -203,7 +202,10 @@ async def send_session_update(openai_ws):
             "audio": {
                 "input": {
                     "format": {"type": "audio/pcmu"},
-                    "turn_detection": {"type": "server_vad"}
+                    "turn_detection": {
+                        "type": "server_vad",
+                        "silence_duration_ms": 1200
+                    }
                 },
                 "output": {
                     "format": {"type": "audio/pcmu"},
@@ -219,5 +221,5 @@ async def send_session_update(openai_ws):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
 
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
