@@ -9,7 +9,7 @@ from datetime import datetime
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.websockets import WebSocketDisconnect
-from twilio.twiml.voice_response import VoiceResponse, Connect, Say, Stream
+from twilio.twiml.voice_response import VoiceResponse, Connect
 from dotenv import load_dotenv
 from twilio.request_validator import RequestValidator
 
@@ -22,15 +22,13 @@ if not TWILIO_AUTH_TOKEN:
 validator = RequestValidator(TWILIO_AUTH_TOKEN)
 
 ALLOWED_NUMBERS = set(os.getenv("ALLOWED_NUMBERS", "").split(","))
-MAX_SILENCE_SECONDS = 90
+MAX_SILENCE_SECONDS = 30
 
 # Configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')  # requires OpenAI Realtime API Access
 PORT = int(os.getenv('PORT', 5050))
 SYSTEM_MESSAGE = (
     "Esti un asistent vocal profesionist. "
-    "Fa pauze naturale intre propozitii. "
-    "Nu te grabi niciodata."
 )
 VOICE = 'alloy'
 TEMPERATURE = float(os.getenv('TEMPERATURE', 0.4))
