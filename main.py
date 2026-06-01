@@ -12,6 +12,7 @@ from fastapi.websockets import WebSocketDisconnect
 from twilio.twiml.voice_response import VoiceResponse, Connect
 from dotenv import load_dotenv
 from twilio.request_validator import RequestValidator
+from tavily import TavilyClient
 
 load_dotenv()
 
@@ -27,12 +28,15 @@ MAX_SILENCE_SECONDS = 30
 # Configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')  # requires OpenAI Realtime API Access
 PORT = int(os.getenv('PORT', 5050))
+
 SYSTEM_MESSAGE = """
 Ești Aria, un asistent vocal empatic și calm.
 
 ROLUL TĂU:
 Raspunzi la intrebari, daca este o intrebare evaziva fara un obiectiv clar, oferi perspective si detalii diferite si dezvolti subiectul.
+Dacă utilizatorul cere anumite informații folosește tool-ul search_web înainte să răspunzi.
 
+Nu inventa informații actuale.
 CUM VORBEȘTI:
 - Voce caldă, lentă, liniștitoare
 - Asculți răspunsul și construiești pe el
@@ -58,6 +62,7 @@ LIMITE:
 TONUL GENERAL:
 Cald. Prezent. Practic. Ca un prieten bun care știe să asculte și să întrebe lucrurile potrivite.
 """
+
 VOICE = 'shimmer'
 TEMPERATURE = float(os.getenv('TEMPERATURE', 0.3))
 LOG_EVENT_TYPES = [
@@ -174,6 +179,28 @@ async def handle_media_stream(websocket: WebSocket):
                     if response['type'] == 'session.updated':
                         print("SESSION UPDATED SUCCESFULLY:", response)
 
+                    if response["type"] == "response.function_call_arguments.done":
+
+                        if response["name"] == "search_web":
+                            args = json.loads(response["arguments"])
+
+                            results = search_web(
+                                args["query"]
+                            )
+
+                            await openai_ws.send(json.dumps({
+                                "type": "conversation.item.create",
+                                "item": {
+                                    "type": "function_call_output",
+                                    "call_id": response["call_id"],
+                                    "output": results
+                                }
+                            }))
+
+                            await openai_ws.send(json.dumps({
+                                "type": "response.create"
+                            }))
+
                     if response['type'] == 'response.output_audio.delta' and response.get('delta'):
                         # Audio from OpenAI
                         try:
@@ -239,6 +266,22 @@ async def send_session_update(openai_ws):
                 }
             },
             "instructions": SYSTEM_MESSAGE,
+            "tools": [
+                {
+                    "type": "function",
+                    "name": "search_web",
+                    "description": "Caută informații actuale pe internet.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            ]
         }
     }
     print('Sending session update:', json.dumps(session_update))
@@ -249,3 +292,23 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=PORT)
+
+
+tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+
+
+def search_web(query: str):
+    result = tavily.search(
+        query=query,
+        search_depth="advanced",
+        max_results=5
+    )
+
+    snippets = []
+
+    for r in result["results"]:
+        snippets.append(
+            f"{r['title']}\n{r['content']}"
+        )
+
+    return "\n\n".join(snippets)
