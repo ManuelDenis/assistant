@@ -163,7 +163,7 @@ async def handle_incoming_call(request: Request):
 
     host = request.url.hostname
     connect = Connect()
-    connect.stream(url=f'wss://asistent-563ac748a576.herokuapp.com/media-stream')
+    connect.stream(url=f'wss://assistant-oqyt.onrender.com/media-stream')
     response.append(connect)
 
     return HTMLResponse(content=str(response), media_type="application/xml")
