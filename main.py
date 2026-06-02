@@ -106,7 +106,7 @@ async def handle_incoming_call(request: Request):
         return HTMLResponse(content=str(response), media_type="application/xml")
 
     response.say(
-        "Buna ziua, spune-mi te rog cu ce te pot ajuta",
+        "Alo!",
         language="ro-RO"
     )
 
