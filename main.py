@@ -13,8 +13,10 @@ from twilio.twiml.voice_response import VoiceResponse, Connect
 from dotenv import load_dotenv
 from twilio.request_validator import RequestValidator
 from tavily import TavilyClient
+import random
 
 load_dotenv()
+
 
 # Validator Global numere telefon
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
@@ -118,6 +120,37 @@ async def handle_incoming_call(request: Request):
     return HTMLResponse(content=str(response), media_type="application/xml")
 
 
+WAITING_MESSAGES = [
+    "O clipă, caut informațiile pentru tine...",
+    "Stai puțin, verific acum...",
+    "Imediat, las-mă să caut...",
+    "O secundă, mă uit acum...",
+    "Bine, caut informația aceasta pentru tine...",
+    "Să văd... o clipă te rog...",
+    "Stai un moment, verific pentru tine...",
+]
+
+
+async def send_waiting_message(openai_ws):
+    """Trimite un mesaj de așteptare audio înainte de search."""
+    message = random.choice(WAITING_MESSAGES)
+    print(f"⏳ Sending waiting message: {message}")
+
+    waiting_event = {
+        "type": "conversation.item.create",
+        "item": {
+            "type": "message",
+            "role": "assistant",
+            "content": [{
+                "type": "text",
+                "text": message
+            }]
+        }
+    }
+    await openai_ws.send(json.dumps(waiting_event))
+    await openai_ws.send(json.dumps({"type": "response.create"}))
+
+
 @app.websocket("/media-stream")
 async def handle_media_stream(websocket: WebSocket):
     """Handle WebSocket connections between Twilio and OpenAI."""
@@ -184,6 +217,13 @@ async def handle_media_stream(websocket: WebSocket):
                         if response["name"] == "search_web":
                             args = json.loads(response["arguments"])
 
+                            # ✅ trimitem mesaj de așteptare
+                            await send_waiting_message(openai_ws)
+
+                            # mică pauză să se audă mesajul
+                            await asyncio.sleep(0.5)
+
+                            # executam search-ul
                             results = search_web(
                                 args["query"]
                             )
