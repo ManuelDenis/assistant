@@ -224,7 +224,8 @@ async def handle_media_stream(websocket: WebSocket):
                             await asyncio.sleep(0.5)
 
                             # executam search-ul
-                            results = search_web(
+                            results = await asyncio.to_thread(
+                                search_web,
                                 args["query"]
                             )
 
