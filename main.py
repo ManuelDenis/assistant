@@ -221,7 +221,7 @@ async def handle_media_stream(websocket: WebSocket):
                             await send_waiting_message(openai_ws)
 
                             # mică pauză să se audă mesajul
-                            await asyncio.sleep(0.5)
+                            await asyncio.sleep(2)
 
                             # executam search-ul
                             results = await asyncio.to_thread(
