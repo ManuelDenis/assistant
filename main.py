@@ -25,7 +25,7 @@ if not TWILIO_AUTH_TOKEN:
 validator = RequestValidator(TWILIO_AUTH_TOKEN)
 
 ALLOWED_NUMBERS = set(os.getenv("ALLOWED_NUMBERS", "").split(","))
-MAX_SILENCE_SECONDS = 60
+MAX_SILENCE_SECONDS = 90
 
 # Configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')  # requires OpenAI Realtime API Access
