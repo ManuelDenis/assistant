@@ -213,27 +213,26 @@ async def handle_media_stream(websocket: WebSocket):
                         print("SESSION UPDATED SUCCESFULLY:", response)
 
                     if response["type"] == "response.function_call_arguments.done":
-
                         if response["name"] == "search_web":
                             args = json.loads(response["arguments"])
+                            call_id = response["call_id"]
 
-                            # ✅ trimitem mesaj de așteptare
+                            # 🔥 search și mesaj de așteptare în PARALEL
+                            search_task = asyncio.create_task(
+                                asyncio.to_thread(search_web, args["query"])
+                            )
+
+                            # trimitem mesaj de așteptare în timp ce search-ul rulează
                             await send_waiting_message(openai_ws)
 
-                            # mică pauză să se audă mesajul
-                            await asyncio.sleep(2)
-
-                            # executam search-ul
-                            results = await asyncio.to_thread(
-                                search_web,
-                                args["query"]
-                            )
+                            # așteptăm rezultatul search-ului
+                            results = await search_task
 
                             await openai_ws.send(json.dumps({
                                 "type": "conversation.item.create",
                                 "item": {
                                     "type": "function_call_output",
-                                    "call_id": response["call_id"],
+                                    "call_id": call_id,
                                     "output": results
                                 }
                             }))
